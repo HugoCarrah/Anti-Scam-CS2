@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Anti-SCAM CS2 - Advanced (Aggressive)",
+  "version": "2.0",
+  "description": "Detecção agressiva de golpes Steam/CS2, alertas educativos e guia Steam Guard.",
+  "permissions": ["tabs", "storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "assets/icon48.png"
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

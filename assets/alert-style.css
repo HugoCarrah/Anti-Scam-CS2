@@ -1,0 +1,30 @@
+body {
+  margin: 0;
+  background: #071022;
+  color: #e6f6ff;
+  font-family: Arial;
+}
+
+.asc2-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  padding: 20px;
+}
+
+.asc2-box {
+  max-width: 760px;
+  background: #0b1220;
+  border: 1px solid #ff6b6b;
+  padding: 24px;
+  border-radius: 10px;
+}
+
+.asc2-box h1 {
+  color: #ff6b6b;
+}
+
+ul {
+  margin-left: 20px;
+}
