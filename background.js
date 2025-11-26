@@ -1,4 +1,4 @@
-const GROQ_API_KEY = "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"; // Substitua pela sua chave
+const GROQ_API_KEY = ""; // Substitua pela sua chave
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // const patterns = [
