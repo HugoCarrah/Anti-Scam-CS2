@@ -1,30 +1,33 @@
-const patterns = [
-  // typosquatting Steam Community
-  "steammcommunity","steamcomnunity","steamcommunnity","steamcommunlty",
-  "steamcommuity","steamcommun1ty","steancommunity","stearncommunity",
+const GROQ_API_KEY = ""; // Substitua pela sua chave
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-  // login / steam guard falsos
-  "steam-secure","steam-security","steam-safe","steamverify","steam-verification",
-  "steamguard-reset","steamguard-support","steam-auth","steamlogin","mobile-steamguard",
+// const patterns = [
+//   // typosquatting Steam Community
+//   "steammcommunity","steamcomnunity","steamcommunnity","steamcommunlty",
+//   "steamcommuity","steamcommun1ty","steancommunity","stearncommunity",
 
-  // trade scam
-  "tradeoffer-secure","tradeoffer-confirm","tradeoffer-steam","tradeoffer-verify",
-  "tradeoffer-auth","tradeoffer-received","tradeoffersecure","confirm-trade",
-  "secure-trade","trade-confirmation","inventory-check","inventory-verify",
+//   // login / steam guard falsos
+//   "steam-secure","steam-security","steam-safe","steamverify","steam-verification",
+//   "steamguard-reset","steamguard-support","steam-auth","steamlogin","mobile-steamguard",
 
-  // skins grátis (golpe clássico)
-  "free-skins","cs2-free-skins","freecase","freeknife","free-giveaway",
-  "free-items","csgoskinsfree","csfree-cases","giveaway-cs2","free-skin",
+//   // trade scam
+//   "tradeoffer-secure","tradeoffer-confirm","tradeoffer-steam","tradeoffer-verify",
+//   "tradeoffer-auth","tradeoffer-received","tradeoffersecure","confirm-trade",
+//   "secure-trade","trade-confirmation","inventory-check","inventory-verify",
 
-  // case/open scam
-  "case-opener","case-open","open-case","cs2-drop","casedrop","drop-open",
+//   // skins grátis (golpe clássico)
+//   "free-skins","cs2-free-skins","freecase","freeknife","free-giveaway",
+//   "free-items","csgoskinsfree","csfree-cases","giveaway-cs2","free-skin",
 
-  // token scam
-  "steam-token","auth-token","tradelink-check",
+//   // case/open scam
+//   "case-opener","case-open","open-case","cs2-drop","casedrop","drop-open",
 
-  // TLD mais usados em scams Steam/CS2
-  ".ru",".su",".ml",".ga",".gq",".tk",".pw",".xyz",".top",".cfd",".work",".site",".fun"
-];
+//   // token scam
+//   "steam-token","auth-token","tradelink-check",
+
+//   // TLD mais usados em scams Steam/CS2
+//   ".ru",".su",".ml",".ga",".gq",".tk",".pw",".xyz",".top",".cfd",".work",".site",".fun"
+// ];
 
 
 const regexes = [
@@ -90,7 +93,64 @@ function logDetection(tabId, url, matched) {
   console.log(`Motivo: ${matched}`);
 }
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+async function checkUrlWithGroq(url) {
+  try {
+    const prompt = `Você é um especialista em segurança cibernética. Analise a URL a seguir e determine se é um possível golpe relacionado a Steam, CS2 ou roubo de credenciais.
+
+      URL: ${url}
+
+      Responda APENAS com:
+      - "SCAM" se for um golpe provável
+      - "SAFE" se for seguro
+      - "SUSPICIOUS" se for suspeito mas inconclusivo
+
+      Critérios para golpes:
+      - Typosquatting de Steam/CS2
+      - Fake Steam Guard/login pages
+      - Trade scams
+      - Free skins/items
+      - Suspicious TLDs (.ru, .ml, .tk, etc)
+      - IP addresses instead of domains`;
+
+    const response = await fetch(GROQ_API_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.2,
+        max_tokens: 600
+      })
+    });
+
+    if (!response.ok) {
+      console.error("Erro Groq API:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(data);
+    
+    const result = data.choices[0].message.content.trim().toUpperCase();
+    console.log(result);
+    
+    return result === "SCAM" ? "GROQ_DETECTION" : (result === "SUSPICIOUS" ? "GROQ_SUSPICIOUS" : null);
+  } catch (error) {
+    console.error("Erro ao chamar Groq API:", error);
+    return null;
+  }
+}
+
+chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+  
   if (!sender || !sender.tab) return;
 
   const url = (msg.url || "").toLowerCase();
@@ -102,22 +162,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   let matched = null;
 
-  for (const p of patterns) {
-    if (url.includes(p)) {
-      matched = p;
+  // Verificar regexes primeiro (mais rápido)
+  for (const r of regexes) {
+    if (r.test(url)) {
+      matched = r.toString();
       break;
     }
   }
+  console.log("Looking for...2");
 
+  // Se não detectou, consultar Groq
   if (!matched) {
-    for (const r of regexes) {
-      if (r.test(url)) {
-        matched = r.toString();
-        break;
-      }
-    }
+    matched = await checkUrlWithGroq(url);
   }
-
 
   if (matched) {
     logDetection(sender.tab.id, url, matched);
